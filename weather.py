@@ -3,15 +3,15 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 
 # Initialize FastMCP server
-mcp = FastMCP("weather")
+mcp = FastMCP("weather")  # Crée un serveur FastMCP pour l'application météo
 
 # Constants
-NWS_API_BASE = "https://api.weather.gov"
-USER_AGENT = "weather-app/1.0"
+NWS_API_BASE = "https://api.weather.gov"  # URL de base de l'API météo nationale américaine
+USER_AGENT = "weather-app/1.0"  # Identifiant de l'application
 
 
 async def make_nws_request(url: str) -> dict[str, Any] | None:
-    """Make a request to the NWS API with proper error handling."""
+    """Fait une requête à l'API NWS avec gestion des erreurs."""
     headers = {
         "User-Agent": USER_AGENT,
         "Accept": "application/geo+json"
@@ -25,7 +25,7 @@ async def make_nws_request(url: str) -> dict[str, Any] | None:
             return None
 
 def format_alert(feature: dict) -> str:
-    """Format an alert feature into a readable string."""
+    """Formate une alerte météo en texte lisible."""
     props = feature["properties"]
     return f"""
 Event: {props.get('event', 'Unknown')}
@@ -35,12 +35,12 @@ Description: {props.get('description', 'No description available')}
 Instructions: {props.get('instruction', 'No specific instructions provided')}
 """
 
-@mcp.tool()
+@mcp.tool()  # Déclare une fonction comme outil MCP
 async def get_alerts(state: str) -> str:
-    """Get weather alerts for a US state.
+    """Récupère les alertes météo pour un état américain.
 
     Args:
-        state: Two-letter US state code (e.g. CA, NY)
+        state: Code à deux lettres de l'état US (ex: CA, NY)
     """
     url = f"{NWS_API_BASE}/alerts/active/area/{state}"
     data = await make_nws_request(url)
@@ -54,32 +54,32 @@ async def get_alerts(state: str) -> str:
     alerts = [format_alert(feature) for feature in data["features"]]
     return "\n---\n".join(alerts)
 
-@mcp.tool()
+@mcp.tool()  # Déclare une fonction comme outil MCP
 async def get_forecast(latitude: float, longitude: float) -> str:
-    """Get weather forecast for a location.
+    """Récupère les prévisions météo pour une localisation.
 
     Args:
-        latitude: Latitude of the location
-        longitude: Longitude of the location
+        latitude: Latitude de la localisation
+        longitude: Longitude de la localisation
     """
-    # First get the forecast grid endpoint
+    # D'abord obtenir le point de la grille de prévision
     points_url = f"{NWS_API_BASE}/points/{latitude},{longitude}"
     points_data = await make_nws_request(points_url)
 
     if not points_data:
         return "Unable to fetch forecast data for this location."
 
-    # Get the forecast URL from the points response
+    # Obtient l'URL des prévisions depuis la réponse des points
     forecast_url = points_data["properties"]["forecast"]
     forecast_data = await make_nws_request(forecast_url)
 
     if not forecast_data:
         return "Unable to fetch detailed forecast."
 
-    # Format the periods into a readable forecast
+    # Formate les périodes en prévisions lisibles
     periods = forecast_data["properties"]["periods"]
     forecasts = []
-    for period in periods[:5]:  # Only show next 5 periods
+    for period in periods[:5]:  # Montre seulement les 5 prochaines périodes
         forecast = f"""
 {period['name']}:
 Temperature: {period['temperature']}°{period['temperatureUnit']}
@@ -92,5 +92,5 @@ Forecast: {period['detailedForecast']}
 
 
 if __name__ == "__main__":
-    # Initialize and run the server
+    # Initialise et démarre le serveur
     mcp.run(transport='stdio')
